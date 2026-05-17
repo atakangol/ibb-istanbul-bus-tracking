@@ -20,6 +20,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+ibb-bus-env/
 .Python
 
 # Node (if used later)
@@ -27,4 +28,4 @@ node_modules/
 
 # Large local datasets (adjust paths as you add data)
 data/raw/
-*.sqlite
+cache/*.sqlite

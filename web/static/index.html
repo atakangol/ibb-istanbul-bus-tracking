@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>İstanbul Bus Lines</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <link rel="stylesheet" href="/static/css/app.css" />
+</head>
+<body>
+  <div id="map"></div>
+  <aside id="sidebar" class="sidebar">
+    <header class="sidebar-header">
+      <h1>İETT Lines</h1>
+      <p class="subtitle">Up to 3 routes — same line twice for both directions</p>
+    </header>
+
+    <section class="search-section">
+      <label for="line-search" class="sr-only">Search lines</label>
+      <input
+        id="line-search"
+        type="search"
+        placeholder="Search by line code or name…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <ul id="search-results" class="search-results hidden" role="listbox"></ul>
+      <p id="search-status" class="status hidden" aria-live="polite"></p>
+    </section>
+
+    <section class="slots-section">
+      <h2>Active lines</h2>
+      <div id="line-slots"></div>
+    </section>
+
+    <p id="toast" class="toast hidden" role="status"></p>
+  </aside>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="/static/js/map.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
