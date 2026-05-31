@@ -1,0 +1,15 @@
+[Unit]
+Description=IBB bus observation logger (Pi)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/IBB_bus
+ExecStart=/home/pi/IBB_bus/.venv/bin/python pi/log_observations.py
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

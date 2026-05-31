@@ -28,4 +28,6 @@ node_modules/
 
 # Large local datasets (adjust paths as you add data)
 data/raw/
+# SQLite: static cache (stops, lines, kv_cache) + observation tables (vehicle_polls, stop_passage_events)
 cache/*.sqlite
+pi/data/*.sqlite

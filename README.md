@@ -45,18 +45,36 @@ Optional credentials (if İBB provides them later): copy `.env.example` to `.env
 
 ### Main endpoints
 
-| Use case | Service |
-|----------|---------|
-| Stops, lines, routes | `UlasimAnaVeri/HatDurakGuzergah.asmx` |
-| Live vehicle positions | `FiloDurum/SeferGerceklesme.asmx` |
-| Stop sequence per line | `ibb/ibb.asmx` (`DurakDetay_GYY`) |
+
+| Use case               | Service                               |
+| ---------------------- | ------------------------------------- |
+| Stops, lines, routes   | `UlasimAnaVeri/HatDurakGuzergah.asmx` |
+| Live vehicle positions | `FiloDurum/SeferGerceklesme.asmx`     |
+| Stop sequence per line | `ibb/ibb.asmx` (`DurakDetay_GYY`)     |
+
 
 Docs and dataset links: [data.ibb.gov.tr](https://data.ibb.gov.tr/en/dataset/?tags=%C4%B0ETT&res_format=API).
 
 Programmatic access: `from iett import IettClient`.
 
-Static stop and line data is cached in **`cache/iett.sqlite`** (SQLite) for **2 weeks** (schedules **1 week**). The first `search_stops` or `get_stop('')` call downloads all stops from the API once, then searches locally. Existing JSON under `cache/lines/`, `cache/line_schedules/`, or `line_schedules/` is imported automatically on startup (file age preserved). Live vehicle calls always hit the API. Pass `force_refresh=True` on cached methods, or `--refresh` on the example scripts, to bypass TTL.
+Static stop and line data is cached in **`cache/iett.sqlite`** (SQLite) for **2 weeks** (schedules **1 week**). The same database holds observation tables (`vehicle_polls`, `stop_passage_events`) when you run the parallel logger. The first `search_stops` or `get_stop('')` call downloads all stops from the API once, then searches locally. Existing JSON under `cache/lines/`, `cache/line_schedules/`, or `line_schedules/` is imported automatically on startup (file age preserved). Live vehicle calls always hit the API. Pass `force_refresh=True` on cached methods, or `--refresh` on the example scripts, to bypass TTL.
+
+### Delay logging and analysis
+
+Run a minute-by-minute poller in a second terminal (does not block the web app):
+
+```bash
+python examples/log_lines.py --lines 15B 19F --interval 60 --until 2026-05-18T22:00
+```
+
+Then analyze passages vs posted terminal schedule:
+
+```bash
+python examples/analyze_delays.py --line 15B
+```
+
+Definitions, schema, and limitations: [docs/delay-analysis.md](docs/delay-analysis.md).
 
 ## Status
 
-Basic SOAP client and examples in place; delay analysis pipeline still TBD.
+Basic SOAP client, web map, parallel observation logger, and terminal-schedule delay analysis (Phase 1) are in place. Per-stop GTFS schedule (Phase 2) is not yet integrated.

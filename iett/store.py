@@ -229,6 +229,44 @@ class IettStore:
                     key TEXT PRIMARY KEY,
                     payload TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS vehicle_polls (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    polled_at TEXT NOT NULL,
+                    line_code TEXT NOT NULL,
+                    vehicle_id TEXT NOT NULL,
+                    avl_time TEXT,
+                    nearest_stop INTEGER,
+                    lat REAL,
+                    lon REAL,
+                    route_code TEXT,
+                    direction_label TEXT,
+                    payload TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_vehicle_polls_line_polled
+                    ON vehicle_polls(line_code, polled_at);
+                CREATE INDEX IF NOT EXISTS idx_vehicle_polls_vehicle_polled
+                    ON vehicle_polls(vehicle_id, polled_at);
+
+                CREATE TABLE IF NOT EXISTS stop_passage_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    detected_at TEXT NOT NULL,
+                    line_code TEXT NOT NULL,
+                    vehicle_id TEXT NOT NULL,
+                    stop_code INTEGER NOT NULL,
+                    prev_stop_code INTEGER,
+                    stop_seq INTEGER,
+                    direction TEXT,
+                    avl_time TEXT,
+                    source TEXT NOT NULL,
+                    UNIQUE(vehicle_id, stop_code, detected_at)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_passages_line_detected
+                    ON stop_passage_events(line_code, detected_at);
+                CREATE INDEX IF NOT EXISTS idx_passages_vehicle_detected
+                    ON stop_passage_events(vehicle_id, detected_at);
                 """
             )
             self._migrate_locality_columns(conn)
@@ -690,3 +728,114 @@ class IettStore:
         with self._connect() as conn:
             conn.execute("DELETE FROM kv_cache WHERE key = ?", (key,))
         self.invalidate_sync(dataset)
+
+    def insert_vehicle_polls(self, rows: list[dict[str, Any]]) -> int:
+        if not rows:
+            return 0
+        records = [
+            (
+                row["polled_at"],
+                row["line_code"],
+                row["vehicle_id"],
+                row.get("avl_time"),
+                row.get("nearest_stop"),
+                row.get("lat"),
+                row.get("lon"),
+                row.get("route_code"),
+                row.get("direction_label"),
+                row["payload"],
+            )
+            for row in rows
+        ]
+        with self._connect() as conn:
+            conn.executemany(
+                """
+                INSERT INTO vehicle_polls (
+                    polled_at, line_code, vehicle_id, avl_time, nearest_stop,
+                    lat, lon, route_code, direction_label, payload
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                records,
+            )
+        return len(records)
+
+    def insert_stop_passage(self, event: dict[str, Any]) -> bool:
+        """Insert a passage event. Returns False if duplicate (unique constraint)."""
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT OR IGNORE INTO stop_passage_events (
+                    detected_at, line_code, vehicle_id, stop_code, prev_stop_code,
+                    stop_seq, direction, avl_time, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    event["detected_at"],
+                    event["line_code"],
+                    event["vehicle_id"],
+                    event["stop_code"],
+                    event.get("prev_stop_code"),
+                    event.get("stop_seq"),
+                    event.get("direction"),
+                    event.get("avl_time"),
+                    event.get("source", "yakin_durak_change"),
+                ),
+            )
+            return cursor.rowcount > 0
+
+    def fetch_passages(
+        self,
+        *,
+        line_code: str | None = None,
+        vehicle_id: str | None = None,
+        since: str | None = None,
+        until: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if line_code:
+            clauses.append("line_code = ?")
+            params.append(line_code.strip())
+        if vehicle_id:
+            clauses.append("vehicle_id = ?")
+            params.append(vehicle_id.strip())
+        if since:
+            clauses.append("detected_at >= ?")
+            params.append(since)
+        if until:
+            clauses.append("detected_at <= ?")
+            params.append(until)
+
+        sql = "SELECT * FROM stop_passage_events"
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += " ORDER BY detected_at"
+        if limit is not None:
+            sql += f" LIMIT {int(limit)}"
+
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return [dict(row) for row in rows]
+
+    def count_vehicle_polls(self, *, line_code: str | None = None) -> int:
+        with self._connect() as conn:
+            if line_code:
+                row = conn.execute(
+                    "SELECT COUNT(*) AS n FROM vehicle_polls WHERE line_code = ?",
+                    (line_code.strip(),),
+                ).fetchone()
+            else:
+                row = conn.execute("SELECT COUNT(*) AS n FROM vehicle_polls").fetchone()
+        return int(row["n"]) if row else 0
+
+    def count_passages(self, *, line_code: str | None = None) -> int:
+        with self._connect() as conn:
+            if line_code:
+                row = conn.execute(
+                    "SELECT COUNT(*) AS n FROM stop_passage_events WHERE line_code = ?",
+                    (line_code.strip(),),
+                ).fetchone()
+            else:
+                row = conn.execute("SELECT COUNT(*) AS n FROM stop_passage_events").fetchone()
+        return int(row["n"]) if row else 0
