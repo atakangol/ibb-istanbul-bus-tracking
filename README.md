@@ -67,6 +67,8 @@ Run a minute-by-minute poller in a second terminal (does not block the web app):
 python examples/log_lines.py --lines 15B 19F --interval 60 --until 2026-05-18T22:00
 ```
 
+Timestamps are always recorded in Istanbul time (UTC+3), even if the machine's clock is set to another time zone, and `--until` is read as Istanbul time.
+
 Then analyze passages vs posted terminal schedule:
 
 ```bash

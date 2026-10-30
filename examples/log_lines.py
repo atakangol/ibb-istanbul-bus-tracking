@@ -15,6 +15,7 @@ if hasattr(sys.stdout, "reconfigure"):
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from iett.observations import ObservationLogger
+from iett.timeutil import now_istanbul, parse_istanbul
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LINES_FILE = PROJECT_ROOT / "observation_lines.txt"
@@ -26,11 +27,8 @@ _DURATION_RE = re.compile(
 
 
 def _parse_until(value: str) -> datetime:
-    text = value.strip()
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
     try:
-        return datetime.fromisoformat(text)
+        return parse_istanbul(value)
     except ValueError as exc:
         raise argparse.ArgumentTypeError(f"Invalid --until datetime: {value}") from exc
 
@@ -86,7 +84,7 @@ def main() -> None:
     parser.add_argument(
         "--until",
         type=_parse_until,
-        help="Stop at this local datetime (ISO8601, e.g. 2026-05-18T22:00)",
+        help="Stop at this Istanbul datetime (ISO8601, e.g. 2026-05-18T22:00; offsets/Z are converted)",
     )
     parser.add_argument(
         "--duration",
@@ -111,7 +109,7 @@ def main() -> None:
 
     deadline = args.until
     if args.duration:
-        deadline = datetime.now() + args.duration
+        deadline = now_istanbul() + args.duration
 
     lines = _load_lines(args)
     logger = ObservationLogger(lines, interval_seconds=args.interval)
