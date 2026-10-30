@@ -11,6 +11,8 @@ This document defines how we measure bus delay in this project, what data we col
 | **Delay (minutes)** | `observed − scheduled`. Positive = late. |
 | **On-time** | Within ±3 minutes of schedule (configurable in `examples/analyze_delays.py`). |
 
+All timestamps (`polled_at`, `detected_at`, schedule `DT`, `--until`, `--since`) are **Istanbul local time** (Europe/Istanbul, UTC+3), stored without an offset. The logger converts from the host clock, so it works on machines set to any time zone. CLI datetimes without an offset are read as Istanbul time; values with `Z` or `+hh:mm` are converted.
+
 Mobiett “5 dk” style messages are **predictions**, not delay versus the published timetable.
 
 ## Data store
@@ -83,7 +85,7 @@ Options:
 | `--lines` | Line codes to watch |
 | `--lines-file` | Default `observation_lines.txt` in project root |
 | `--interval` | Seconds between rounds (default 60) |
-| `--until` | Stop at local ISO datetime |
+| `--until` | Stop at Istanbul ISO datetime |
 | `--duration` | Run for a span (`4h`, `90m`, …) |
 | `-v` | Debug logging |
 

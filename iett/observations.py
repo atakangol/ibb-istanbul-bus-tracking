@@ -10,6 +10,7 @@ from typing import Any
 
 from .client import IettClient
 from .store import IettStore
+from .timeutil import now_istanbul
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class ObservationLogger:
             logger.info("Cached %s stops for line %s", len(stops), line)
 
     def run_until(self, deadline: datetime | None = None) -> None:
-        """Poll until *deadline* or keyboard interrupt."""
+        """Poll until *deadline* (naive Istanbul time) or keyboard interrupt."""
         self.prefetch_line_stops()
         logger.info(
             "Observation logger started for %s (interval %.0fs)",
@@ -97,12 +98,12 @@ class ObservationLogger:
             self.interval_seconds,
         )
         while True:
-            if deadline is not None and datetime.now() >= deadline:
+            if deadline is not None and now_istanbul() >= deadline:
                 logger.info("Reached --until deadline")
                 break
-            polled_at = datetime.now()
+            polled_at = now_istanbul()
             self._poll_round(polled_at)
-            if deadline is not None and datetime.now() >= deadline:
+            if deadline is not None and now_istanbul() >= deadline:
                 break
             time.sleep(self.interval_seconds)
 

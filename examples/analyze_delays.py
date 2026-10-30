@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from iett import IettClient
 from iett.observations import build_stop_seq_index, route_direction
 from iett.store import IettStore
+from iett.timeutil import parse_istanbul
 
 # PlanlananSeferSaati SGUNTIPI values vary by line (commonly C / I / P).
 _PREFERRED_DAY_TYPE = "C"
@@ -28,10 +29,13 @@ STALE_AVL_MINUTES = 5.0
 
 
 def _parse_dt(value: str) -> datetime:
-    text = value.strip()
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-    return datetime.fromisoformat(text)
+    return parse_istanbul(value)
+
+
+def _istanbul_filter(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return parse_istanbul(value).isoformat(timespec="seconds")
 
 
 def _parse_avl_time(value: str | None, *, on_date: date) -> datetime | None:
@@ -269,8 +273,8 @@ def analyze_passages(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Analyze delays from observation SQLite data")
     parser.add_argument("--line", help="Filter to one line code")
-    parser.add_argument("--since", help="Passages on/after ISO datetime")
-    parser.add_argument("--until", help="Passages on/before ISO datetime")
+    parser.add_argument("--since", help="Passages on/after ISO datetime (Istanbul time unless an offset is given)")
+    parser.add_argument("--until", help="Passages on/before ISO datetime (Istanbul time unless an offset is given)")
     parser.add_argument(
         "--service-type",
         help="Filter schedule rows (SSERVISTIPI), e.g. ÖHO",
@@ -301,8 +305,8 @@ def main() -> None:
     store = IettStore()
     passages = store.fetch_passages(
         line_code=args.line,
-        since=args.since,
-        until=args.until,
+        since=_istanbul_filter(args.since),
+        until=_istanbul_filter(args.until),
         limit=args.limit,
     )
     if not passages:
